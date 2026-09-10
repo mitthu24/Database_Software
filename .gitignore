@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+apps/web/.next/
+apps/web/out/
+
+# nest / build output
+apps/api/dist/
+
+# env
+.env
+.env.local
+*.env
+!*.env.example
+
+# misc
+.DS_Store
+*.log
+coverage/
