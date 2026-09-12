@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 
 export default function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, configured } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,6 +31,13 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center p-8">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
         <h1 className="text-xl font-semibold">Sign in</h1>
+
+        {!configured && (
+          <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+            Firebase is not configured for this deployment yet — sign-in is unavailable until
+            NEXT_PUBLIC_FIREBASE_* environment variables are set.
+          </p>
+        )}
 
         <div className="space-y-1">
           <label htmlFor="email" className="text-sm font-medium">
@@ -64,7 +71,7 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !configured}
           className="w-full rounded bg-black py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {submitting ? 'Signing in…' : 'Sign in'}
