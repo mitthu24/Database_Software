@@ -11,10 +11,24 @@ deployed:
   project): https://api-production-641b9.up.railway.app — `/health`
   returns 200. Includes a live Postgres plugin with all three
   control-plane migrations applied.
-- **No live Firebase project yet** — this is the one missing piece. Both
-  deployments boot and respond correctly without it (see "lazy Firebase
-  init" below), but sign-in is unavailable until real
-  `FIREBASE_*`/`NEXT_PUBLIC_FIREBASE_*` credentials are set on both.
+- **No live Firebase project yet.** Both deployments boot and respond
+  correctly without it (see "lazy Firebase init" below). In the meantime,
+  sign-in works via a **TEMPORARY email/password auth path** (see its own
+  section below) — do not mistake this for the real auth story.
+- Two more Vercel projects, same `apps/web` codebase, split by the
+  server-side `PANEL_MODE` env var (`apps/web/src/middleware.ts`) —
+  mirrors the user's existing `smart-bi-studio-admin`/`smart-bi-studio-app`
+  pattern:
+  - https://database-software-admin.vercel.app (`PANEL_MODE=admin`) — Super
+    Admin only, `/` redirects to `/admin`, `/company/*` redirects to `/admin`.
+  - https://database-software-company.vercel.app (`PANEL_MODE=company`) —
+    Company workspace only, `/admin/*` redirects to `/`.
+  - The original combined `database-software-web` project has no
+    `PANEL_MODE` set and is unaffected — both panels still live there too.
+- All three Vercel projects were deployed via CLI from `apps/web`, not
+  connected to GitHub for auto-deploy (unlike the original
+  `database-software-web`, which IS GitHub-connected but still needs its
+  Root Directory set — see step 5 below).
 
 Read first: AGENTS.md, docs/PROJECT-STATUS.md, docs/decisions/ADR-003-MULTI-TENANCY.md,
 docs/decisions/ADR-006-SUPER-ADMIN-MODEL.md, docs/architecture/AUTHORIZATION.md,
@@ -37,6 +51,12 @@ Repo layout additions this phase:
   list/create/delete, column list/add/rename/delete/reorder/type-change).
 - `apps/web/src/app/page.tsx` — now lists the signed-in user's workspaces and
   gates the Admin panel link on `isPlatformAdmin`.
+- `apps/web/src/middleware.ts` — `PANEL_MODE`-based route gating for the
+  split admin/company Vercel deployments (see above).
+- TEMPORARY email/password auth (see its own section below):
+  `apps/api/src/auth/temp-auth.service.ts`,
+  `apps/api/src/scripts/seed-temp-demo.ts`, `users.passwordHash` column
+  (migration `0003_nostalgic_king_cobra.sql`), `apps/web/src/lib/temp-auth.ts`.
 
 Key design points to know before touching this code:
 - The tenant schema name is ALWAYS derived server-side
@@ -74,32 +94,62 @@ Key design points to know before touching this code:
   Firebase Admin app via NestJS constructor injection (that's what made
   Nest resolve it eagerly last time).
 
+## TEMPORARY email/password auth
+
+Explicitly contradicts AGENTS.md rule 4 ("Firebase handles identity. Never
+store passwords in PostgreSQL.") and ADR-004-FIREBASE-AUTH.md — an
+intentional, user-approved, temporary exception because no live Firebase
+project exists yet. **Remove it as soon as one does.**
+
+- Gated entirely behind `TEMP_AUTH_ENABLED=true` (API) /
+  `NEXT_PUBLIC_TEMP_AUTH_ENABLED=true` (web) — currently set on the Railway
+  `api` service and all three Vercel projects.
+- API: `TempAuthService` (`apps/api/src/auth/temp-auth.service.ts`) issues
+  its own JWT (`TEMP_AUTH_JWT_SECRET`) from an email+bcrypt-hash check;
+  `FirebaseAuthGuard` branches to verify that JWT instead of a real Firebase
+  ID token when the flag is on. `POST /auth/login` is the entry point.
+- Web: `lib/temp-auth.ts` + branches in `lib/api-client.ts` and
+  `lib/firebase/auth-context.tsx` — token lives in `localStorage` instead of
+  the Firebase SDK. `/login` shows the demo credentials directly on the page.
+- Demo accounts (seeded via `apps/api/src/scripts/seed-temp-demo.ts`,
+  already run against the live Railway Postgres):
+  - Super Admin: `demo-admin@example.com` / `DemoAdmin123!`
+  - Company Admin (of "Demo Company", which already has one real table —
+    `customers` — created through the live UI to prove Phase 5's DDL engine
+    end to end): `demo-company@example.com` / `DemoCompany123!`
+
+**To remove once Firebase is set up:** delete `temp-auth.service.ts` and its
+branch in `firebase-auth.guard.ts` and `auth.controller.ts`'s `login` route;
+delete `apps/web/src/lib/temp-auth.ts` and its branches in `api-client.ts`/
+`auth-context.tsx`/`login/page.tsx`; drop the `password_hash` column; unset
+`TEMP_AUTH_ENABLED`/`TEMP_AUTH_JWT_SECRET`/`NEXT_PUBLIC_TEMP_AUTH_ENABLED`
+everywhere. The demo accounts/company can stay or go — they're ordinary rows
+by then, nothing special about them once Firebase is the only auth path.
+
 Next steps for whoever picks this up:
 1. `npm install` in `apps/web` and `apps/api` (both verified to install and
    build cleanly; `apps/api` also has `npm test` passing).
 2. Create a real Firebase project (Email/Password sign-in enabled). Set
    `FIREBASE_PROJECT_ID`/`FIREBASE_CLIENT_EMAIL`/`FIREBASE_PRIVATE_KEY` on
    the Railway `api` service (`railway variable set ... --service api`)
-   and `NEXT_PUBLIC_FIREBASE_*` on the Vercel `database-software-web`
-   project (`vercel env add ... production`), then redeploy both.
-3. **Seed the first Super Admin manually** — insert one row into
-   `platform_admins` for a `users` row matching a real Firebase account,
-   against the live Railway Postgres (`railway connect Postgres` or
-   `railway ssh --service api`). There is no UI or API endpoint that can
-   create the first one (by design — see ADR-006).
+   and `NEXT_PUBLIC_FIREBASE_*` on all three Vercel projects
+   (`vercel env add ... production`), then follow the removal steps above
+   and redeploy everything.
+3. If not going the Firebase route immediately, at least seed the first
+   **real** Super Admin the same way once you do — insert a row into
+   `platform_admins` for a `users` row matching a real Firebase account
+   (`railway connect Postgres` or `railway ssh --service api`). There is no
+   UI or API endpoint that can create the first one (by design — see
+   ADR-006).
 4. Configure `BREVO_API_KEY`/`BREVO_SENDER_EMAIL` on the Railway `api`
    service so company-admin invite emails actually send.
-5. On Vercel, set **Settings → General → Root Directory** to `apps/web`
-   for the `database-software-web` project — the CLI can't set this
-   remotely, and without it the GitHub-triggered auto-deploy (already
-   connected) will fail looking for `package.json` at the repo root. Every
-   deploy so far has been a direct `vercel --prod` CLI deploy from
-   `apps/web`, which bypasses this.
-6. Sign in as the seeded Super Admin at `/login`, use `/admin/companies` to
-   create a company and invite its first admin, then sign in as that admin
-   and open `/company/:companyId` to exercise table/column DDL against the
-   real, already-migrated Railway Postgres for the first time.
-7. Phase 6 (next, per docs/implementation/IMPLEMENTATION-PLAN.md): security,
+5. On Vercel, set **Settings → General → Root Directory** to `apps/web` for
+   the `database-software-web` project (the GitHub-connected one) — the CLI
+   can't set this remotely, and without it its auto-deploy fails looking for
+   `package.json` at the repo root. All three projects have been deployed
+   via direct `vercel --prod` CLI runs from `apps/web` instead, which
+   bypasses this; none of the three are currently auto-deploying from git.
+6. Phase 6 (next, per docs/implementation/IMPLEMENTATION-PLAN.md): security,
    tenant-isolation, integration and E2E tests
    (docs/implementation/TESTING-PLAN.md) — cross-tenant requests, forged
    company IDs, unauthorized role changes, identifier-injection attempts,

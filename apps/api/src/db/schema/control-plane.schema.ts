@@ -37,6 +37,11 @@ export const users = pgTable(
     firebaseUid: text('firebase_uid').notNull(),
     email: text('email').notNull(),
     displayName: text('display_name'),
+    // TEMPORARY (see docs/HANDOFF.md "temporary email/password auth"): only
+    // set for demo/testing accounts created while no live Firebase project
+    // exists. Real Firebase-identified users never populate this. Remove
+    // this column when the temporary auth path is removed.
+    passwordHash: text('password_hash'),
     status: text('status').notNull().default('active'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

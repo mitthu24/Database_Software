@@ -4,6 +4,7 @@ import { FirebaseAuthGuard } from './firebase-auth.guard';
 import { ResolveAppIdentityGuard } from './resolve-app-identity.guard';
 import { CompanyRolesGuard } from './company-roles.guard';
 import { PlatformAdminGuard } from './platform-admin.guard';
+import { TempAuthService } from './temp-auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { MembershipsModule } from '../memberships/memberships.module';
@@ -21,7 +22,7 @@ import { PlatformAdminsModule } from '../platform-admins/platform-admins.module'
 @Module({
   imports: [FirebaseAdminModule, UsersModule, MembershipsModule, PlatformAdminsModule],
   controllers: [AuthController],
-  providers: [FirebaseAuthGuard, ResolveAppIdentityGuard, CompanyRolesGuard, PlatformAdminGuard],
+  providers: [FirebaseAuthGuard, ResolveAppIdentityGuard, CompanyRolesGuard, PlatformAdminGuard, TempAuthService],
   exports: [
     FirebaseAdminModule,
     UsersModule,
@@ -31,6 +32,7 @@ import { PlatformAdminsModule } from '../platform-admins/platform-admins.module'
     ResolveAppIdentityGuard,
     CompanyRolesGuard,
     PlatformAdminGuard,
+    TempAuthService,
   ],
 })
 export class AuthModule {}

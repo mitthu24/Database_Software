@@ -18,6 +18,12 @@ export class UsersService {
     return rows[0] ?? null;
   }
 
+  /** Used only by the TEMPORARY email/password auth path — see docs/HANDOFF.md. */
+  async findByEmail(email: string): Promise<AppUserRow | null> {
+    const rows = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+    return rows[0] ?? null;
+  }
+
   /**
    * JIT-provisions a `users` row the first time a verified Firebase identity
    * is seen. This only establishes that the identity is KNOWN — it grants

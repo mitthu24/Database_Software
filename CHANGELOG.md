@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2 — Temporary auth + split admin/company deployments
+- **TEMPORARY email/password auth** (explicit, user-approved exception to AGENTS.md rule 4 / ADR-004-FIREBASE-AUTH.md — see docs/HANDOFF.md for the full rationale and exact removal steps): added `users.password_hash` (migration `0003_nostalgic_king_cobra.sql`), `TempAuthService` + `POST /auth/login` + a branch in `FirebaseAuthGuard` (API, all gated behind `TEMP_AUTH_ENABLED`), and `lib/temp-auth.ts` + matching branches in `api-client.ts`/`auth-context.tsx`/`login/page.tsx` (web, gated behind `NEXT_PUBLIC_TEMP_AUTH_ENABLED`). Everything downstream of `FirebaseAuthGuard` is untouched.
+- Added `apps/api/src/scripts/seed-temp-demo.ts` and ran it against the live Railway Postgres, seeding a demo Super Admin and a demo Company Admin (of a new "Demo Company").
+- Added `apps/web/src/middleware.ts`: a `PANEL_MODE` env var splits the one Next.js app into an admin-only view and a company-only view. Deployed two new Vercel projects off the same codebase — `database-software-admin` and `database-software-company` — alongside the existing combined `database-software-web` (untouched).
+- **First real, end-to-end verification against the live Railway Postgres**: signed in as both demo accounts through the deployed UI and created a real table (`customers`, with a `full_name` column) through the Company panel — confirming Phase 5's `SchemaManagementService` DDL and `information_schema` introspection both work correctly outside of unit tests.
+
 ## 0.6.1 — First deployment
 - Deployed `apps/web` to Vercel (`smart-bi-studio/database-software-web`, GitHub-connected): https://database-software-web.vercel.app
 - Deployed `apps/api` to a new, isolated Railway project `database-software-api` (Postgres plugin included, all three control-plane migrations applied): https://api-production-641b9.up.railway.app

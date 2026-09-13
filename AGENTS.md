@@ -3,7 +3,7 @@
 1. Read this file, PROJECT-STATUS.md, HANDOFF.md and relevant docs before coding.
 2. Implement only the approved MVP; do not add future features silently.
 3. Stack: Next.js + React + TypeScript + Tailwind + shadcn/ui; NestJS + TypeScript; PostgreSQL on Railway; Drizzle; Firebase Authentication; Brevo; Vercel; Cloudflare.
-4. Firebase handles identity. Never store passwords in PostgreSQL. Backend verifies Firebase ID tokens.
+4. Firebase handles identity. Never store passwords in PostgreSQL. Backend verifies Firebase ID tokens. (TEMPORARY, user-approved exception in effect while no live Firebase project exists — see docs/HANDOFF.md "TEMPORARY email/password auth". Remove it, per that doc's exact steps, once a real Firebase project is set up; do not let it become permanent by default.)
 5. Authorization is server-side and deny-by-default. Never trust a companyId supplied by the browser.
 6. Dynamic SQL identifiers must be validated and safely quoted. Values must use parameterized SQL.
 7. Super Admin and company routes must be isolated.

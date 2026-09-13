@@ -3,9 +3,11 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
+import { isTempAuthEnabled } from '@/lib/temp-auth';
 
 export default function LoginPage() {
   const { signIn, configured } = useAuth();
+  const tempAuth = isTempAuthEnabled();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,6 +33,19 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center p-8">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
         <h1 className="text-xl font-semibold">Sign in</h1>
+
+        {tempAuth && (
+          <div className="rounded border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900">
+            <p className="font-medium">Demo/testing mode</p>
+            <p>No live Firebase project is set up yet — this is a temporary login for testing.</p>
+            <p className="mt-2">
+              Super Admin: <code>demo-admin@example.com</code> / <code>DemoAdmin123!</code>
+            </p>
+            <p>
+              Company Admin: <code>demo-company@example.com</code> / <code>DemoCompany123!</code>
+            </p>
+          </div>
+        )}
 
         {!configured && (
           <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
