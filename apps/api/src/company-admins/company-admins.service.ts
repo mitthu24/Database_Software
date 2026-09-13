@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 import { and, eq } from 'drizzle-orm';
 import { DRIZZLE_DB, Database } from '../db/db.provider';
 import { companyMemberships, users } from '../db/schema/control-plane.schema';
-import { FIREBASE_ADMIN } from '../auth/firebase-admin.provider';
+import { FirebaseAdminService } from '../auth/firebase-admin.provider';
 import { UsersService } from '../users/users.service';
 import { CompaniesService } from '../companies/companies.service';
 import { AuditService } from '../audit/audit.service';
@@ -13,7 +13,7 @@ import { BrevoService } from '../brevo/brevo.service';
 export class CompanyAdminsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
-    @Inject(FIREBASE_ADMIN) private readonly firebaseApp: admin.app.App,
+    private readonly firebaseAdmin: FirebaseAdminService,
     private readonly usersService: UsersService,
     private readonly companiesService: CompaniesService,
     private readonly auditService: AuditService,
@@ -101,16 +101,17 @@ export class CompanyAdminsService {
   }
 
   private async getOrCreateFirebaseUser(email: string): Promise<admin.auth.UserRecord> {
+    const app = this.firebaseAdmin.getApp();
     try {
-      return await this.firebaseApp.auth().getUserByEmail(email);
+      return await app.auth().getUserByEmail(email);
     } catch {
       // Firebase throws when no user exists for this email — create one.
-      return this.firebaseApp.auth().createUser({ email });
+      return app.auth().createUser({ email });
     }
   }
 
   private async sendInviteEmail(email: string): Promise<void> {
-    const link = await this.firebaseApp.auth().generatePasswordResetLink(email);
+    const link = await this.firebaseAdmin.getApp().auth().generatePasswordResetLink(email);
     await this.brevoService.sendTransactionalEmail({
       to: { email },
       subject: 'You have been added as a company administrator',

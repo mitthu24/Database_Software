@@ -1,13 +1,11 @@
 import {
   CanActivate,
   ExecutionContext,
-  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import * as admin from 'firebase-admin';
-import { FIREBASE_ADMIN } from './firebase-admin.provider';
+import { FirebaseAdminService } from './firebase-admin.provider';
 import { FirebaseIdentity } from './firebase-identity.type';
 
 export interface RequestWithFirebaseUser extends Request {
@@ -24,7 +22,7 @@ export interface RequestWithFirebaseUser extends Request {
  */
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
-  constructor(@Inject(FIREBASE_ADMIN) private readonly firebaseApp: admin.app.App) {}
+  constructor(private readonly firebaseAdmin: FirebaseAdminService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithFirebaseUser>();
@@ -35,7 +33,7 @@ export class FirebaseAuthGuard implements CanActivate {
     }
 
     try {
-      const decoded = await this.firebaseApp.auth().verifyIdToken(token);
+      const decoded = await this.firebaseAdmin.getApp().auth().verifyIdToken(token);
       request.firebaseUser = {
         uid: decoded.uid,
         email: decoded.email ?? null,
