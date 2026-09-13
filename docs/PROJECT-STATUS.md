@@ -1,6 +1,6 @@
 # Project Status
 
-STATUS: PHASE 5 — COMPANY WORKSPACE + DYNAMIC TABLE/COLUMN DDL SCAFFOLDED. Table **data** viewing/editing is out of MVP scope (see docs/ROADMAP.md "Later").
+STATUS: PHASE 5 — COMPANY WORKSPACE + DYNAMIC TABLE/COLUMN DDL SCAFFOLDED AND DEPLOYED (web on Vercel, API + Postgres on Railway; no live Firebase project yet). Table **data** viewing/editing is out of MVP scope (see docs/ROADMAP.md "Later").
 
 Approved MVP: Super Admin/company management plus company database/table/column structure management.
 
@@ -25,7 +25,11 @@ Frontend (`apps/web`):
 - Home page now lists the signed-in user's workspaces and only shows the Admin panel link to actual Super Admins.
 - `npx tsc --noEmit` and `npm run build` pass clean.
 
-Still not run against a real Postgres/Firebase project — this remains source-only, same evidence bar as Phase 4. Full DDL execution against a live database, cross-tenant isolation tests, and E2E flows are Phase 6.
+Deployed:
+- Web: https://database-software-web.vercel.app (Vercel project `smart-bi-studio/database-software-web`, GitHub-connected — Root Directory still needs to be set to `apps/web` in the dashboard for that auto-deploy to actually build; every deploy so far is a direct `vercel --prod` CLI deploy).
+- API: https://api-production-641b9.up.railway.app (new Railway project `database-software-api`, isolated from other Railway projects on the account) + a Postgres plugin with all three control-plane migrations applied. `GET /health` returns 200.
+- Fixed a real bug found while deploying: both `AuthProvider` (web) and `FirebaseAuthGuard`'s DI (API) initialized the Firebase SDK eagerly, which threw and crashed the whole process/page with no `FIREBASE_*` env vars set — exactly the state of both deployments, since there is still no live Firebase project. Both now initialize lazily (`isFirebaseConfigured()`/`getFirebaseAuth()` on web, `FirebaseAdminService.getApp()` on the API); `/login` shows a clear "not configured" notice instead of crashing.
+- Not yet exercised against a live Firebase project — sign-in and everything behind it is unavailable until real Firebase credentials are set on both deployments (see HANDOFF.md). Cross-tenant isolation tests and full DDL-against-real-Postgres E2E flows are Phase 6.
 
 Next: Phase 6 — security, tenant-isolation, integration and E2E tests (docs/implementation/TESTING-PLAN.md).
 

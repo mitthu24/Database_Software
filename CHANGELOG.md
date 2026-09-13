@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1 — First deployment
+- Deployed `apps/web` to Vercel (`smart-bi-studio/database-software-web`, GitHub-connected): https://database-software-web.vercel.app
+- Deployed `apps/api` to a new, isolated Railway project `database-software-api` (Postgres plugin included, all three control-plane migrations applied): https://api-production-641b9.up.railway.app
+- Fixed a crash found while deploying: `AuthProvider` (web) and `FirebaseAuthGuard`'s constructor injection (API) both initialized the Firebase SDK eagerly, which throws with no `FIREBASE_*`/`NEXT_PUBLIC_FIREBASE_*` env vars set — the exact state of both fresh deployments, since no live Firebase project exists yet. Added `isFirebaseConfigured()`/lazy `getFirebaseAuth()` on web and `FirebaseAdminService.getApp()` (replacing eager DI) on the API; both apps now boot and serve correctly without Firebase configured, with `/login` showing a clear notice instead of a generic crash page.
+- Pushed the full Phase 0–5 codebase to the existing `mitthu24/Database_Software` GitHub repo (fast-forwarded on top of its prior partial-push history, no force-push).
+
 ## 0.6.0 — Phase 5
 - Added `apps/api/src/workspaces`: `WorkspacesService.getOrCreateForCompany` — lazily provisions a company's tenant Postgres schema (`CREATE SCHEMA IF NOT EXISTS`) and its `workspaces` row in one transaction, per `docs/flows/COMPANY-FLOW.md`. Schema name is deterministic (`tenant_<companyId without dashes>`), never client-supplied, and re-validated with `assertSafeIdentifier`.
 - Added `apps/api/src/schema-management`: `SchemaManagementService` — the sole path for dynamic tenant DDL (create/rename/delete table; add/rename/delete column; change column type; toggle NOT NULL/UNIQUE; reorder columns). Every identifier is normalized + `assertSafeIdentifier`/`quoteIdentifier`'d before use; column types are looked up through an allow-list (`column-types.ts`), never taken as a raw string; destructive operations require `confirm: true`; every mutating call is transactional and audited (success and failure).
